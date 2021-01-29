@@ -1,0 +1,35 @@
+#---
+   #become: true
+   #connection: local
+   #hosts: localhost
+   #vars_files:
+   #          - ./aws_vars/vars
+   #name: "check EC2 groups and create as required"
+   #tasks
+   #
+   #
+   - name: "Create EC2 web Load Balancer"
+     community.aws.elb_classic_lb:
+       instance_ids:
+                  -  "{{ web_instance_id_1[0] }}"
+                  -  "{{ web_instance_id_2[0] }}"
+                  -  "{{ web_instance_id_3[0] }}"
+
+       listeners:
+                - protocol: "{{ proto }}"
+                  load_balancer_port: "{{ port_80 }}"
+                  instance_port: "{{ port_80 }}"
+
+                - protocol: "{{ proto }}"
+                  load_balancer_port: "{{ port_443 }}"
+                  instance_port: "{{ port_443 }}"
+
+
+       name: "{{ loadbalancer_name }}"
+       region: "{{ aws_region }}"
+       security_group_names: "{{ elb_security_group_name }}"
+       state: present
+       zones: "{{ zone_name }}"
+       connection_draining_timeout: 60
+       tags:
+            Environment: "{{ instance_tags }}"

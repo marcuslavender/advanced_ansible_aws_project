@@ -1,0 +1,22 @@
+--- 
+- 
+  become: false
+  connection: local
+  hosts: localhost
+  vars_files:
+            - ./aws_vars/vars
+  name: "Check availbility zones"
+  tasks: 
+    - 
+      amazon.aws.aws_az_info: 
+        aws_access_key: "{{ aws_access_key }}"
+        aws_secret_key: "{{ aws_secret_key }}"
+        filters: 
+          zone-name: "{{ zone_name }}"
+        region: "{{ aws_region }}"
+      name: check_aws_az
+      register: zones
+    - 
+      debug: 
+        msg: "{{ zones }}"
+      name: "print zones"

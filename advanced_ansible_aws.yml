@@ -1,0 +1,299 @@
+---
+
+- name: "Deploy Advanced ansible course project"
+  hosts: localhost
+  connection: local
+  become: true
+  #vars:
+  # server_name:  server_names['web']
+  vars_files:
+              - ../aws_vars/vars # All AWS vars stored here
+  tasks:
+        - block:
+             # Create EC2 security group for webservers
+           - name: "Create EC2 Web Security Group"
+             include_tasks: create_ec2_web_security_groups.yml
+          vars:
+                security_group_name: "{{ web_security_group_name }}"
+                security_group_description:  "{{ web_security_group_description }}"
+                tcp_ports: "{{ web_tcp_ports }}"
+
+        - block:
+            # Create EC2 security group for dbservers
+           - name: "Create EC2 DB Security Group"
+             include_tasks: create_ec2_db_security_groups.yml
+          vars:
+                 security_group_name: "{{ db_security_group_name }}"
+                 security_group_description:  "{{ db_security_group_description }}"
+                 tcp_ports: "{{ db_tcp_ports }}"
+
+
+        - block:
+            # Create EC2 security group for loadbalancers
+            - name: "Create EC2 ELB Security Group"
+              include_tasks: create_elb_security_groups.yml
+          vars:
+                  security_group_name: "{{ elb_security_group_name }}"
+                  security_group_description:  "{{ elb_security_group_description }}"
+                  tcp_ports: "{{ db_tcp_ports }}"
+
+
+
+          #Check if any instances exist already
+        - name: "Check EC2 Instances"
+          community.aws.ec2_instance_info:
+                    region: "{{ aws_region }}"
+          register: ec2_instance_status
+
+
+         # Print out EC2 instance information
+        - name: "Print EC2 Instance Information"
+          debug:
+               var: ec2_instance_status
+
+         # Get EC2 instance status
+        - name: "Get Active Instance Status"
+          debug:
+             #var: ec2_instance_status
+          loop: "{{ ec2_instance_status | json_query('instances[*].state.name') }}"
+          register: instance_state
+
+
+         # Print EC2 instance
+        - name: "Print Instance State"
+          debug:
+               var: instance_state
+
+
+         # Get active Instance names
+        - name: "Get Active Instance Names"
+          debug:
+            #var: ec2_instance_status
+          loop: "{{ ec2_instance_status | json_query('instances[*].tags.Name') }}"
+          register: instance_names
+
+
+
+         # Print Instance names
+        - name: "Print Instance Names"
+          debug:
+              var: instance_names
+
+
+
+              #- name: "Print Servername Variable"
+              #debug:
+              # var: "{{ server_name }}"
+
+
+        # Create EC2 Web server instances
+        - block:
+                 - name: "Create EC2 Web Instance"
+                   include_tasks: create_ec2_instances.yml
+                   with_nested:
+                            - instance_state.results
+                            #- instance_names.results
+                   when:  item[0] != 'running'
+          vars:
+               server_name: "{{ server_names['web'][0] }}"
+               security_group: "{{ web_security_group_name }}"
+               instance_tags: "{{ web_tags[0]}}"
+
+
+        - block:
+                 - name: "Create EC2 Web Instance"
+                   include_tasks: create_ec2_instances.yml
+                   with_nested:
+                            - instance_state.results
+                            #- instance_names.results
+                   when:  item[0] != 'running'
+          vars:
+               server_name: "{{ server_names['web'][1] }}"
+               security_group: "{{ web_security_group_name }}"
+               instance_tags: "{{ web_tags[0] }}"
+
+
+        - block:
+                 - name: "Create EC2 Web Instance"
+                   include_tasks: create_ec2_instances.yml
+                   with_nested:
+                            - instance_state.results
+                          #  - instance_names.results
+                   when:  item[0] != 'running'
+          vars:
+               server_name: "{{ server_names['web'][2] }}"
+               security_group: "{{ web_security_group_name }}"
+               instance_tags: "{{ web_tags[0] }}"
+
+          # Create EC2 Database instances
+        - block:
+              - name: "Create EC2 DB Instance"
+                include_tasks: create_ec2_instances.yml
+                with_nested:
+                          - instance_state.results
+                          - instance_names.results
+                when : item[0] != 'running'
+          vars:
+               server_name: "{{ server_names['db'][0] }}"
+               security_group: "{{ db_security_group_name }}"
+               instance_tags: "{{ db_tags[0]}}"
+
+        - block:
+              - name: "Create EC2 DB Instance"
+                include_tasks: create_ec2_instances.yml
+                with_nested:
+                          - instance_state.results
+                          - instance_names.results
+                when : item[0] != 'running'
+          vars:
+               server_name: "{{ server_names['db'][1] }}"
+               security_group: "{{ db_security_group_name }}"
+               instance_tags: "{{ db_tags[0] }}"
+
+
+          # Get EC2 instance information
+        - name: "Get EC2 Instance information"
+          community.aws.ec2_instance_info:
+              region: "{{ aws_region }}"
+          register: ec2_instance_status
+
+         # Get Database server tag names
+        - name: "Get DB server tag names"
+          debug:
+          loop: "{{ ec2_instance_status |  to_json | from_json |  json_query('instances[].tags.Name | [?contains(@, `Db`)]') }}"
+          register: db_instance_name
+
+        - name: "Print DB Server tag names"
+          debug:
+                var: db_instance_name
+
+
+        # Get Web server tag names
+        - name: "Get Web server tag names"
+          debug:
+          loop: "{{ ec2_instance_status |  to_json | from_json |  json_query('instances[].tags.Name | [?contains(@, `Web`)]') }}"
+          register: web_instance_name
+
+        - name: "Print Web Server tag names"
+          debug:
+                var: web_instance_name
+
+
+
+
+
+         # Set use EC2 Instance names to find the Instance ID's and then create a Database server load balancer and attach the Database instances
+        - block:
+
+              - name: "Set Instance names to variables and then set instance ID's to variables and create ELB"
+                debug:
+                     var: db_instance_id_1
+                     #msg: "variables created"
+
+                    # Get information on existing loadbalancer  and print it out
+              - name: "Get ELB info"
+                community.aws.ec2_elb_info:
+                      region: "{{ aws_region }}"
+                register: ec2_elb_status
+
+              - name: "print ELB info"
+                debug:
+                    var: ec2_elb_status
+
+
+                   # Get the status of existing loadbalancer
+              - name: "Get ELB status"
+                loop: "{{ ec2_elb_status | json_query('elbs[*].state.name') }}"
+                register: instance_state
+                debug:
+                     msg: "Checking for existing loadbalancers"
+
+
+
+
+                #Create EC2 database server loadbalancer
+              - name: "Create EC2 DB Server Load Balancer"
+                include_tasks: create_ec2_db_loadbalancer.yml
+                with_nested:
+                          - instance_state.elbs
+                when : item[0] != 'running'
+
+          vars:
+              db_instance_name_1:  "{{ db_instance_name | json_query('results[0].item')}}"
+              db_instance_name_2: "{{ db_instance_name | json_query('results[1].item')}}"
+              query1: 'instances[?tags.Name == `{{ db_instance_name_1 }}`].instance_id'
+              query2: 'instances[?tags.Name == `{{ db_instance_name_2 }}`].instance_id'
+              db_instance_id_1: "{{ ec2_instance_status | json_query(query1) }}"
+              db_instance_id_2: "{{ ec2_instance_status | json_query(query2) }}"
+              loadbalancer_name: "{{ elb_names[0] }}"
+              security_group: "{{ elb_security_group_name }}"
+              instance_tags: "{{ elb_tags[0] }}"
+              proto: "{{ elb_protocol[0] }}"
+              port: "{{ elb_port[0] }}"
+              zone_name: "{{ elb_zone_name }}"
+
+
+
+
+
+        - block:
+
+              - name: "Set Instance names to variables and then set instance ID's to variables and create ELB"
+                debug:
+                     var: web_instance_id_3
+                     #msg: "variables created"
+
+                    # Get information on existing loadbalancer  and print it out
+              - name: "Get ELB info"
+                community.aws.ec2_elb_info:
+                      region: "{{ aws_region }}"
+                register: ec2_elb_status
+
+              - name: "print ELB info"
+                debug:
+                    var: ec2_elb_status
+
+
+                   # Get the status of existing loadbalancer
+              - name: "Get ELB status"
+                loop: "{{ ec2_elb_status | json_query('elbs[*].state.name') }}"
+                register: instance_state
+                debug:
+                     msg: "Checking for existing loadbalancers"
+
+
+
+
+                #Create EC2 web server loadbalancer
+              - name: "Create EC2 web Server Load Balancer"
+                include_tasks: create_ec2_web_loadbalancer.yml
+                with_nested:
+                          - instance_state.elbs
+                when : item[0] != 'running'
+
+          vars:
+              web_instance_name_1: "{{ web_instance_name | json_query('results[0].item')}}"
+              web_instance_name_2: "{{ web_instance_name | json_query('results[1].item')}}"
+              web_instance_name_3: "{{ web_instance_name | json_query('results[2].item')}}"
+              query1: 'instances[?tags.Name == `{{ web_instance_name_1 }}`].instance_id'
+              query2: 'instances[?tags.Name == `{{ web_instance_name_2 }}`].instance_id'
+              query3: 'instances[?tags.Name == `{{ web_instance_name_3 }}`].instance_id'
+              web_instance_id_1: "{{ ec2_instance_status | json_query(query1) }}"
+              web_instance_id_2: "{{ ec2_instance_status | json_query(query2) }}"
+              web_instance_id_3: "{{ ec2_instance_status | json_query(query3) }}"
+              loadbalancer_name: "{{ elb_names[1] }}"
+              security_group: "{{ elb_security_group_name }}"
+              instance_tags: "{{ elb_tags[0] }}"
+              proto: "{{ elb_protocol[0] }}"
+              port_80: "{{ elb_port[1] }}"
+              port_443: "{{ elb_port[2] }}"
+              zone_name: "{{ elb_zone_name }}"
+
+
+
+
+
+
+
+        - debug:
+              msg: "did it work?"
