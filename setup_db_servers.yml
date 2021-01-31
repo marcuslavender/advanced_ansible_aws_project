@@ -1,0 +1,8 @@
+---
+
+ - name: "Apply DB role"
+   hosts: security_groups_Advanced_Ansible_DB_Servers
+   become_user: ec2-user
+   become: true
+   roles:
+       - db

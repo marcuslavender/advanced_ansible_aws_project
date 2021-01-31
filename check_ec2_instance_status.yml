@@ -1,0 +1,16 @@
+#---
+
+#-
+#  name: "Check EC2 instance status"
+#  become: true
+#  connection: local
+#  hosts: localhost
+#  vars_files:
+#             - ../aws_vars/vars
+#  tasks:
+      - name: "check status"
+        community.aws.ec2_instance_info:
+                   region: "{{ aws_region }}"
+                   filters:
+                           instance-state-name: 'running'
+        register: ec2_instance_status

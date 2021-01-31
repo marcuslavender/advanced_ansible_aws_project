@@ -4,8 +4,6 @@
   hosts: localhost
   connection: local
   become: true
-  #vars:
-  # server_name:  server_names['web']
   vars_files:
               - ../aws_vars/vars # All AWS vars stored here
   tasks:
@@ -40,60 +38,63 @@
 
 
           #Check if any instances exist already
-        - name: "Check EC2 Instances"
-          community.aws.ec2_instance_info:
-                    region: "{{ aws_region }}"
-          register: ec2_instance_status
+      #  - name: "Check EC2 Instances"
+      #    include_tasks: check_ec2_instance_status.yml
+          #community.aws.ec2_instance_info:
+                    #region: "{{ aws_region }}"
+      #    register: ec2_instance_status
 
 
-         # Print out EC2 instance information
-        - name: "Print EC2 Instance Information"
-          debug:
-               var: ec2_instance_status
+
+
+
+
+        ## used for debugging
+        # Print out EC2 instance information
+        #- name: "Print EC2 Instance Information"
+        #  debug:
+        #       var: ec2_instance_status
 
          # Get EC2 instance status
-        - name: "Get Active Instance Status"
-          debug:
-             #var: ec2_instance_status
-          loop: "{{ ec2_instance_status | json_query('instances[*].state.name') }}"
-          register: instance_state
+      #  - name: "Get Active Instance Status"
+      #    debug:
+      #         msg: "Getting current state of all instances"
+      #    loop: "{{ ec2_instance_status | json_query('instances[*].state.name') }}"
+      #    register: instance_state
 
-
-         # Print EC2 instance
-        - name: "Print Instance State"
-          debug:
-               var: instance_state
+         ## Used for debugging
+        # Print EC2 instance
+        #- name: "Print Instance State"
+        #  debug:
+        #       var: instance_state
 
 
          # Get active Instance names
-        - name: "Get Active Instance Names"
-          debug:
+      #  - name: "Get Active Instance Names"
+      #    debug:
             #var: ec2_instance_status
-          loop: "{{ ec2_instance_status | json_query('instances[*].tags.Name') }}"
-          register: instance_names
+      #    loop: "{{ ec2_instance_status | json_query('instances[*].tags.Name') }}"
+      #    register: instance_names
+
+
+         ## Used for Debugging
+         #Print Instance names
+        #- name: "Print Instance Names"
+        #  debug:
+        #      var: instance_names
 
 
 
-         # Print Instance names
-        - name: "Print Instance Names"
-          debug:
-              var: instance_names
 
-
-
-              #- name: "Print Servername Variable"
-              #debug:
-              # var: "{{ server_name }}"
 
 
         # Create EC2 Web server instances
         - block:
                  - name: "Create EC2 Web Instance"
                    include_tasks: create_ec2_instances.yml
-                   with_nested:
-                            - instance_state.results
-                            #- instance_names.results
-                   when:  item[0] != 'running'
+                   #loop:
+                    #        - instance_state.results
+                   #when:  item[0] != 'running'
           vars:
                server_name: "{{ server_names['web'][0] }}"
                security_group: "{{ web_security_group_name }}"
@@ -103,10 +104,9 @@
         - block:
                  - name: "Create EC2 Web Instance"
                    include_tasks: create_ec2_instances.yml
-                   with_nested:
-                            - instance_state.results
-                            #- instance_names.results
-                   when:  item[0] != 'running'
+                   #loop:
+                    #        - instance_state.results
+                   #when:  item[0] != 'running'
           vars:
                server_name: "{{ server_names['web'][1] }}"
                security_group: "{{ web_security_group_name }}"
@@ -116,10 +116,9 @@
         - block:
                  - name: "Create EC2 Web Instance"
                    include_tasks: create_ec2_instances.yml
-                   with_nested:
-                            - instance_state.results
-                          #  - instance_names.results
-                   when:  item[0] != 'running'
+                   #loop:
+                    #        - instance_state.results
+                   #when:  item[0] != 'running'
           vars:
                server_name: "{{ server_names['web'][2] }}"
                security_group: "{{ web_security_group_name }}"
@@ -129,10 +128,10 @@
         - block:
               - name: "Create EC2 DB Instance"
                 include_tasks: create_ec2_instances.yml
-                with_nested:
-                          - instance_state.results
-                          - instance_names.results
-                when : item[0] != 'running'
+                #loop:
+                #          - instance_state.results
+                          #- instance_names.results
+                #when : item[0] != 'running'
           vars:
                server_name: "{{ server_names['db'][0] }}"
                security_group: "{{ db_security_group_name }}"
@@ -141,10 +140,10 @@
         - block:
               - name: "Create EC2 DB Instance"
                 include_tasks: create_ec2_instances.yml
-                with_nested:
-                          - instance_state.results
-                          - instance_names.results
-                when : item[0] != 'running'
+                #loop:
+                #          - instance_state.results
+                          #- instance_names.results
+                #when : item[0] != 'running'
           vars:
                server_name: "{{ server_names['db'][1] }}"
                security_group: "{{ db_security_group_name }}"
@@ -153,8 +152,7 @@
 
           # Get EC2 instance information
         - name: "Get EC2 Instance information"
-          community.aws.ec2_instance_info:
-              region: "{{ aws_region }}"
+          include_tasks: check_ec2_instance_status.yml
           register: ec2_instance_status
 
          # Get Database server tag names
@@ -178,6 +176,24 @@
           debug:
                 var: web_instance_name
 
+
+
+
+
+         # Wait until EC2 instances are running before continuing
+         #Not working currently - Do not think AWS returns a status I can use to check
+        - name: "Wait until EC2 instances have running status before continuing"
+          include_tasks: check_ec2_instance_status.yml
+          loop: "{{ ec2_instance_status | json_query('instances[*].state.name') }}"
+          register: instance_state
+          #loop: instance_state.results
+
+        - name: "check instance status"
+          #debug:
+              #var: instance_state.results
+          pause:
+             minutes: 10
+          when: '"pending" in instance_state.results'
 
 
 
@@ -214,9 +230,9 @@
                 #Create EC2 database server loadbalancer
               - name: "Create EC2 DB Server Load Balancer"
                 include_tasks: create_ec2_db_loadbalancer.yml
-                with_nested:
-                          - instance_state.elbs
-                when : item[0] != 'running'
+                #with_nested:
+                #          - instance_state.elbs
+                #when : item[0] != 'running'
 
           vars:
               db_instance_name_1:  "{{ db_instance_name | json_query('results[0].item')}}"
