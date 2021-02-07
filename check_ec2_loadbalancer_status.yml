@@ -1,7 +1,7 @@
 #---
 
 #-
-#  name: "Check EC2 instance status"
+#  name: "Check EC2 loadbalancer status"
 #  become: true
 #  connection: local
 #  hosts: localhost
@@ -9,10 +9,10 @@
 #             - ../aws_vars/vars
 #  tasks:
       - name: "check status"
-        community.aws.ec2_instance_info:
-                   region: "{{ region }}"
-                   filters:
-                           instance-state-name: 'running'
+        community.aws.ec2_elb_info:
+                   region: "{{ aws_region }}"
+                   names:
+                          - "{{ aws_ec2_loadbalancer_name }}"
                    aws_access_key: "{{ aws_ec2_access_key }}"
                    aws_secret_key: "{{ aws_ec2_secret_key }}"
-        register: ec2_instance_status
+        register: ec2_loadbalancer_status

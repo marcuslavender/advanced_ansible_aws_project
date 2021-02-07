@@ -1,10 +1,10 @@
 ---
 
- - name: "Apply DB role"
-   hosts: security_groups_Db_Servers
+ - name: "Apply Web role"
+   hosts: security_groups_Web_Servers
    vars_files:
                - ../aws_vars/vars
    become_user: root
    become: true
    roles:
-       - db
+       - web

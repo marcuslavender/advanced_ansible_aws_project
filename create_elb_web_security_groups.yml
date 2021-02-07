@@ -1,0 +1,37 @@
+#---
+   #become: true
+   #connection: local
+   #hosts: localhost
+   #vars_files:
+   #          - ./aws_vars/vars
+   #name: "check EC2 groups and create as required"
+   #tasks
+   #
+   #
+   - name: "Create EC2 Web ELB Security Group"
+     amazon.aws.ec2_group:
+             region: "{{ aws_region }}"
+             description: "{{ security_group_description }}"
+             name: "{{ security_group_name }}"
+             state: present
+             vpc_id: "{{ vpc_id }}"
+             tags:
+                  name: "{{ elb_security_group_tag }}"
+             rules:
+                 - proto: tcp
+                   cidr_ip: "0.0.0.0/0"
+                   from_port: "{{ tcp_ports[1] }}"
+                   to_port:  "{{ tcp_ports[1] }}"
+                   rule_desc: "allow Web traffic from Internet to web servers  on 172.31.0.0/20 on port 80"
+                   
+                 - proto: tcp
+                   cidr_ip: "0.0.0.0/0"
+                   from_port: "{{ tcp_ports[2] }}"
+                   to_port: "{{ tcp_ports[2] }}"
+                   rule_desc: "allow  Web traffic from Internet to web Servers on 172.31.0.0/20 on port 443"
+
+     register: ec2_group_status
+
+   - name: "Print Group Rules"
+     debug:
+          var: ec2_group_status

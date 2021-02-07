@@ -19,15 +19,13 @@
                   name: DB_Servers_Group
              rules:
                  - proto: tcp
-                   cidr_ip: "172.31.0.0/20"
+                   #cidr_ip: "{{ inbound_allowed_ips }}"
+                   group_name: "{{ inbound_allowed_security_group }}"
+                   group_desc: "{{ inbound_allowed_security_group_description }}"
                    from_port: "{{ tcp_ports['mysql'] }}"
                    to_port:  "{{ tcp_ports['mysql'] }}"
-                   rule_desc: "allow mysql traffic from 172.31.0.0/20 on port 3306"
-                 - proto: tcp
-                   from_port: "{{ tcp_ports['mysql'] }}"
-                   to_port:  "{{ tcp_ports['mysql'] }}"
-                   cidr_ip: "{{ controller_source_ip }}"
-                   rule_desc: "allow  mysql traffic from webserver on port 3306"
+                   rule_desc: "allow mysql traffic from {{ inbound_allowed_security_group }} on port 3306"
+
                  - proto: tcp
                    from_port: "{{ tcp_ports['ssh'] }}"
                    to_port:  "{{ tcp_ports['ssh'] }}"

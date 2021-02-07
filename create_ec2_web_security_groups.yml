@@ -9,25 +9,29 @@
    #
    #
    - name: "Create EC2 Web Security Group"
-     amazon.aws.ec2_group:        
+     amazon.aws.ec2_group:
              region: "{{ aws_region }}"
              description: "{{ security_group_description }}"
              name: "{{ security_group_name }}"
              state: "present"
              vpc_id: "{{ vpc_id }}"
-             tags: 
+             tags:
                   name: Web_Servers_Group
              rules:
              - proto: tcp
-               cidr_ip: "{{ controller_source_ip }}"
+               #cidr_ip: "{{ inbound_allowed_ips }}"
+               group_name: "{{ inbound_allowed_security_group }}"
+               group_desc: "{{ inbound_allowed_security_group_description }}"
                from_port: "{{ tcp_ports['http'] }}"
                to_port:  "{{ tcp_ports['http'] }}"
-               rule_desc: "allow web traffic from {{ controller_source_ip }} on port 80"
+               rule_desc: "allow web traffic from {{ inbound_allowed_security_group }} on port 80"
              - proto: tcp
                from_port: "{{ tcp_ports['https'] }}"
                to_port:  "{{ tcp_ports['https'] }}"
-               cidr_ip: "{{ controller_source_ip }}"
-               rule_desc: "allow  https traffic from {{ controller_source_ip }} on port 443"
+               #cidr_ip: "{{ inbound_allowed_ips }}"
+               group_name: "{{ inbound_allowed_security_group }}"
+               group_desc: "{{ inbound_allowed_security_group_description }}"
+               rule_desc: "allow  https traffic from {{ inbound_allowed_security_group }} on port 443"
              - proto: tcp
                from_port: "{{ tcp_ports['ssh'] }}"
                to_port:  "{{ tcp_ports['ssh'] }}"
@@ -39,5 +43,3 @@
    - name: "Print Group Rules"
      debug:
           var: ec2_group_status
-
-

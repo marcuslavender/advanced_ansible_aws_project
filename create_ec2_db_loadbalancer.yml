@@ -21,9 +21,11 @@
 
        name: "{{ loadbalancer_name }}"
        region: "{{ aws_region }}"
-       security_group_names: "{{ elb_security_group_name }}"
+       security_group_names: "{{ elb_security_group_name[0] }}"
        state: present
        zones: "{{ zone_name }}"
+       #scheme: internal
+       #wait: yes
        connection_draining_timeout: 60
        tags:
             Environment: "{{ instance_tags }}"
