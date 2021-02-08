@@ -8,3 +8,63 @@
    become: true
    roles:
        - web
+   tasks:
+
+     # Download code
+
+     - name: "Check if code exists"
+       shell: "if [ -f /var/www/html/index.php ]; then echo 'present'; fi"
+       register: path
+
+     - name: "Download github code"
+       command:
+              cmd: /usr/bin/git clone https://github.com/kodekloudhub/learning-app-ecommerce.git /var/www/html/
+       args:
+           chdir: /var/www/html
+       when: 'path.stdout.find("present") == -1'
+
+
+
+
+
+
+     - block:
+         #Check if any instances exist already
+       - name: "Check EC2 loadbancer"
+         include_tasks: check_ec2_loadbalancer_status.yml
+
+
+
+       # Print out EC2 instance information
+       - name: "Print EC2 loadbalancer Information"
+         debug:
+               var: ec2_loadbalancer_status
+
+
+       - name: "Get database loadbalancer hostname"
+         set_fact:
+                  lb_hostname: "{{ ec2_loadbalancer_status | json_query('elbs[*].dns_name   ') }}"
+                  #lb_hostname: "{{ ec2_loadbalancer_status | json_query('elbs[*].canonical_hosted_zone_name') }}"
+
+       - name:
+         debug:
+               var: lb_hostname[0]
+
+
+
+
+       vars:
+          ansible_python_interpreter: ~/.virtualenvs/venv/bin/python3
+          aws_ec2_access_key: "{{ aws_access_key }}"
+          aws_ec2_secret_key: "{{ aws_secret_key }}"
+          aws_ec2_loadbalancer_name: "{{  elb_names[0] }}"
+
+
+
+
+       # Update index.php
+
+     - name: "update index.php to connect to the correct database"
+       become: true
+       command:
+               cmd:  sed -i 's/172.20.1.101/{{ lb_hostname[0] }}/g' /var/www/html/index.php
