@@ -8,3 +8,65 @@
    become: true
    roles:
        - db
+   tasks:
+       # create database
+       # no_log to stop password being shown in ansible logs
+
+       - block:
+
+              - name: "create database"
+                mysql_db:
+                        name: ecomdb
+                        state: present
+                        unsafe_login_password: no
+
+          # configure database user
+
+              - name: "configure database user"
+                mysql_user:
+                        name: ecomuser
+                        password: "{{ userpassword }}"
+                        host: "%"
+                        priv: ecomdb.*:CREATE,SELECT,INSERT,UPDATE,DELETE,DROP
+                        state: present
+
+
+              - name: Removes all anonymous user accounts
+                mysql_user:
+                        name: ''
+                        host_all: yes
+                        state: absent
+
+         vars:
+              ansible_python_interpreter: ~/.virtualenvs/venv/bin/python3
+
+
+
+
+          # copy mysql script to load data to remote_user
+
+       - name: "copy sql script to remote server"
+         copy:
+           src: ./files/db-load-script.sql
+           dest: /tmp/db-load-script.sql
+           owner: "{{ users }}"
+           group: wheel
+           mode: 0644
+
+
+
+          # Check if products table exists if not skip next task
+       - name: check if products exists
+         command: >
+              mysql --user=ecomuser --password=ecompassword ecomdb
+              --host=localhost --batch --skip-column-names
+              --execute="SELECT * from products"
+         register: result
+         check_mode: no
+         ignore_errors: yes
+
+
+
+       - name: "load database data"
+         shell: /usr/bin/mysql -u ecomuser -p{{ userpassword }} < /tmp/db-load-script.sql
+         when: 'result.rc == 1'
