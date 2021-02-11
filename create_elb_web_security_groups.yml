@@ -23,7 +23,7 @@
                    from_port: "{{ tcp_ports[1] }}"
                    to_port:  "{{ tcp_ports[1] }}"
                    rule_desc: "allow Web traffic from Internet to web servers  on 172.31.0.0/20 on port 80"
-                   
+
                  - proto: tcp
                    cidr_ip: "0.0.0.0/0"
                    from_port: "{{ tcp_ports[2] }}"

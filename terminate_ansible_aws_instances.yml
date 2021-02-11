@@ -1,12 +1,12 @@
 ---
 
-- 
+-
   name: Terminate every running instance in a region. Use with EXTREME caution.
   become: true
   connection: local
   hosts: localhost
   vars_files:
-             - ../aws_vars/vars
+             - ./aws_vars/vars
   tasks:
       - name: "Delete AWS instances"
         community.aws.ec2_instance:

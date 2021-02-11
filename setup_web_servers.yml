@@ -3,7 +3,7 @@
  - name: "Apply Web role"
    hosts: security_groups_Web_Servers
    vars_files:
-               - ../aws_vars/vars
+               - ./aws_vars/vars
    become_user: root
    become: true
    roles:
@@ -67,4 +67,5 @@
      - name: "update index.php to connect to the correct database"
        become: true
        command:
-               cmd:  sed -i 's/172.20.1.101/{{ lb_hostname[0] }}/g' /var/www/html/index.php
+               #cmd:  sed -i 's/172.20.1.101/{{ lb_hostname[0] }}/g' /var/www/html/index.php
+               cmd: sed -i  's/172.20.1.101\|internal-DB-*/{{ lb_hostname[0] }}/g' /var/www/html/index.php

@@ -5,7 +5,7 @@
   connection: local
   become: true
   vars_files:
-              - ../aws_vars/vars # All AWS vars stored here
+              - ./aws_vars/vars # All AWS vars stored here
   tasks:
         - block:
              # Create EC2 security group for webservers
