@@ -6,7 +6,7 @@
 #  connection: local
 #  hosts: localhost
 #  vars_files:
-#             - ../aws_vars/vars
+#             - ./aws_vars/vars
 #  tasks:
       - name: "check status"
         community.aws.ec2_elb_info:
