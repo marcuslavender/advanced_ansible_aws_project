@@ -271,8 +271,5 @@
               subnets: "{{ vpc_subnets }}"
               #zone_name: "{{ elb_zone_name }}"
 
-
-
-
         - debug:
               msg: "Finished :-)"
