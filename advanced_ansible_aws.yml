@@ -71,6 +71,7 @@
                server_name: "{{ server_names['web'][0] }}"
                security_group: "{{ web_security_group_name }}"
                instance_tags: "{{ web_tags[0]}}"
+               subnets: "{{ vpc_subnets[0] }}"
 
 
         - block:
@@ -81,6 +82,7 @@
                server_name: "{{ server_names['web'][1] }}"
                security_group: "{{ web_security_group_name }}"
                instance_tags: "{{ web_tags[0] }}"
+               subnets: "{{ vpc_subnets[1] }}"
 
 
         - block:
@@ -91,6 +93,7 @@
                server_name: "{{ server_names['web'][2] }}"
                security_group: "{{ web_security_group_name }}"
                instance_tags: "{{ web_tags[0] }}"
+               subnets: "{{ vpc_subnets[2] }}"
 
           # Create EC2 Database instances
         - block:
@@ -101,6 +104,8 @@
                server_name: "{{ server_names['db'][0] }}"
                security_group: "{{ db_security_group_name }}"
                instance_tags: "{{ db_tags[0]}}"
+               subnets: "{{ vpc_subnets[0] }}"
+
 
         - block:
               - name: "Create EC2 DB Instance"
@@ -111,6 +116,7 @@
                security_group: "{{ db_security_group_name }}"
                instance_tags: "{{ db_tags[0] }}"
                region: "{{ aws_region }}"
+               subnets: "{{ vpc_subnets[1] }}"
 
         - block:
           # Get EC2 instance information
@@ -262,10 +268,8 @@
               proto: "{{ elb_protocol[0] }}"
               port_80: "{{ elb_port[1] }}"
               port_443: "{{ elb_port[2] }}"
-              zone_name: "{{ elb_zone_name }}"
-
-
-
+              subnets: "{{ vpc_subnets }}"
+              #zone_name: "{{ elb_zone_name }}"
 
         - debug:
               msg: "Finished :-)"

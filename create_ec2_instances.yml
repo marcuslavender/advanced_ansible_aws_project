@@ -21,7 +21,7 @@
                region: "{{ aws_region }}"
                name: "{{ server_name }}"
                key_name: "Provision key"
-               vpc_subnet_id: "{{ vpc_subnet_id }}"
+               vpc_subnet_id: "{{ subnets }}"
                instance_type: "{{ instance_type }}"
                security_group: "{{ security_group }}"
                network:
